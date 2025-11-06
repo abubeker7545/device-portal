@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Registered Devices</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #f1f5f9;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .logout-btn {
+      padding: 10px 20px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .logout-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .home-btn {
+      padding: 10px 20px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .home-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .table-wrapper {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: rgba(15, 23, 42, 0.6);
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    }
+
+    th {
+      padding: 16px;
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 16px;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.2);
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+
+    tbody tr {
+      transition: background 0.2s ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(71, 85, 105, 0.1);
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .badge-os {
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .badge-browser {
+      background: rgba(10, 165, 180, 0.1);
+      color: #67e8f9;
+      border: 1px solid rgba(10, 165, 180, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-state p {
+      color: #94a3b8;
+      font-size: 16px;
+    }
+
+    /* Mobile card view */
+    .device-card {
+      display: none;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .device-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+    }
+
+    .device-card-id {
+      font-weight: 600;
+      color: #93c5fd;
+      font-size: 16px;
+    }
+
+    .device-card-field {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .device-card-label {
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .device-card-value {
+      color: #e2e8f0;
+      text-align: right;
+      flex: 1;
+      margin-left: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+
+      .header-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+
+      .home-btn,
+      .logout-btn {
+        flex: 1;
+        min-width: 100px;
+        text-align: center;
+      }
+
+      /* Hide table on mobile */
+      table {
+        display: none;
+      }
+
+      /* Show card view on mobile */
+      .device-card {
+        display: block;
+      }
+
+      .table-wrapper {
+        padding: 12px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      /* Hide card view on desktop */
+      .device-card {
+        display: none;
+      }
+
+      /* Show table on desktop */
+      table {
+        display: table;
+      }
+
+      th, td {
+        padding: 12px;
+        font-size: 13px;
+      }
+
+      .badge {
+        padding: 3px 8px;
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Registered Devices</h1>
+      <div class="header-buttons">
+        <a href="/" class="home-btn">Home</a>
+        <a href="/logout" class="logout-btn">Logout</a>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      {% if devices %}
+      <!-- Desktop Table View -->
+      <table>
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Device Name</th>
+            <th>Operating System</th>
+            <th>Browser</th>
+            <th>IP Address</th>
+            <th>Registered Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for device in devices %}
+          <tr>
+            <td>{{ device[0] }}</td>
+            <td>{{ device[1] }}</td>
+            <td><span class="badge badge-os">{{ device[2] }}</span></td>
+            <td><span class="badge badge-browser">{{ device[3] }}</span></td>
+            <td>{{ device[4] }}</td>
+            <td>{{ device[5] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- Mobile Card View -->
+      {% for device in devices %}
+      <div class="device-card">
+        <div class="device-card-header">
+          <span class="device-card-id">Device #{{ device[0] }}</span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">Name:</span>
+          <span class="device-card-value">{{ device[1] }}</span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">OS:</span>
+          <span class="device-card-value"><span class="badge badge-os">{{ device[2] }}</span></span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">Browser:</span>
+          <span class="device-card-value"><span class="badge badge-browser">{{ device[3] }}</span></span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">IP Address:</span>
+          <span class="device-card-value">{{ device[4] }}</span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">Registered:</span>
+          <span class="device-card-value">{{ device[5] }}</span>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <p>No registered devices yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

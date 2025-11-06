@@ -1,0 +1,170 @@
+[MASTER]
+# Specify a configuration file.
+#rcfile=
+
+# Python code to execute, usually for sys.path manipulation such as
+# pygtk.require().
+#init-hook=
+
+# Use multiple processes to speed up Pylint.
+jobs=4
+
+# Control the amount of potential inferred values when inferring a single
+# object. This can help the performance when dealing with large functions or
+# complex, nested conditions.
+limit-inference-results=100
+
+# List of plugins (as comma separated values of python modules names) to load,
+# usually to register additional checkers.
+load-plugins=
+
+# Pickle collected data for later comparisons.
+persistent=yes
+
+# Minimum Python version to use for version dependent checks.
+py-version=3.8
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+# Number of spaces of indent required inside a hanging or continued line.
+indent-after-paren=4
+
+# String used as indentation unit.
+indent-string='    '
+
+[MESSAGES CONTROL]
+# Disable the message, report, category or checker with the given id(s).
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-instance-attributes,
+    import-error,
+    no-member,
+    fixme
+
+[BASIC]
+# Good variable names which should always be accepted, separated by a comma.
+good-names=i,j,k,ex,Run,_,id,db,app
+
+# Include a hint for the correct naming format with invalid-name.
+include-naming-hint=no
+
+# List of decorators that produce properties, such as abc.abstractproperty.
+property-classes=abc.abstractproperty
+
+# Naming style matching correct argument names.
+argument-naming-style=snake_case
+
+# Naming style matching correct function names.
+function-naming-style=snake_case
+
+# Naming style matching correct variable names.
+variable-naming-style=snake_case
+
+# Naming style matching correct class attribute names.
+attr-naming-style=snake_case
+
+# Naming style matching correct class names.
+class-naming-style=PascalCase
+
+# Naming style matching correct module names.
+module-naming-style=snake_case
+
+# Naming style matching correct constant names.
+const-naming-style=UPPER_CASE
+
+[REFACTORING]
+# Maximum number of nested blocks for function / method body
+max-nested-blocks=5
+
+# Maximum number of return / yield / throw / break statements in a function or
+# method body.
+max-returns=6
+
+# Maximum number of branch for function / method body.
+max-branches=12
+
+# Maximum number of statements in function / method body.
+max-statements=50
+
+# Maximum number of parents for a class.
+max-parents=7
+
+# Maximum number of attributes for a class.
+max-attributes=7
+
+# Minimum number of public methods for a class.
+min-public-methods=2
+
+# Maximum number of public methods for a class.
+max-public-methods=20
+
+[IMPORTS]
+# Allow wildcard imports from modules that define __all__.
+allow-wildcard-with-all=no
+
+# Analyse import fallback blocks. This can be used to support both Python 2 and
+# 3 compatible code.
+analyse-fallback-blocks=no
+
+# Deprecated modules which should not be used, separated by a comma.
+deprecated-modules=
+
+# Output a graph (.gv or any supported image format) of external dependencies
+# to the given file (report RP0402 must not be disabled).
+ext-import-graph=
+
+# Output a graph (.gv or any supported image format) of all (i.e. internal and
+# external) dependencies to the given file (report RP0402 must not be
+# disabled).
+int-import-graph=
+
+# Force import order to recognize a module as part of the standard
+# compatibility libraries.
+known-standard-library=
+
+# Force import order to recognize a module as part of a third party library.
+known-third-party=
+
+[DESIGN]
+# Maximum number of arguments for function / method.
+max-args=5
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=7
+
+# Maximum number of boolean expressions in an if statement (see R0916).
+max-bool-expr=5
+
+# Maximum number of branch for function / method body.
+max-branches=12
+
+# Maximum number of locals for function / method body.
+max-locals=15
+
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=20
+
+# Maximum number of return / yield for function / method body.
+max-returns=6
+
+# Maximum number of statements in function / method body.
+max-statements=50
+
+# Minimum number of public methods for a class (see R0903).
+min-public-methods=2
+

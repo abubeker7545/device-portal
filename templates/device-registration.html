@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register Device</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 40px 0;
+    }
+
+    .registration-card {
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #94a3b8;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.5);
+      color: #f1f5f9;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    input[type="text"]::placeholder {
+      color: #64748b;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #10b981;
+      background: rgba(15, 23, 42, 0.8);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    button {
+      width: 100%;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .info-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 13px;
+      color: #a7f3d0;
+      margin-top: 24px;
+      line-height: 1.6;
+    }
+
+    .success-message {
+      display: none;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      color: #a7f3d0;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .error-message {
+      display: none;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 16px;
+      color: #fca5a5;
+      margin-top: 20px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .admin-btn {
+      width: 100%;
+      padding: 12px 24px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 12px;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+    }
+
+    .admin-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+      transform: translateY(-2px);
+    }
+
+    @media (max-width: 480px) {
+      .registration-card {
+        padding: 32px 24px;
+      }
+
+      .header h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="registration-card">
+      <div class="header">
+        <h1>Register Device</h1>
+        <p>Add a new device to your account</p>
+      </div>
+
+      <form id="registrationForm">
+        <div class="form-group">
+          <label for="device-name">Device Name</label>
+          <input 
+            type="text" 
+            id="device-name" 
+            name="device_name" 
+            placeholder="e.g., MacBook Pro, Office Desktop"
+            pattern="^[a-zA-Z0-9\s\-_]+$"
+            required
+          >
+        </div>
+
+        <button type="submit" id="submitBtn">Register Device</button>
+
+        <a href="/login" class="admin-btn">Admin Login</a>
+
+        <div class="success-message" id="successMessage">
+          ✓ Device registered successfully!
+        </div>
+
+        <div class="error-message" id="errorMessage">
+          ⚠ Registration failed. Please try again.
+        </div>
+
+        <div class="info-box">
+          <strong>Note:</strong> Device name must contain only letters, numbers, spaces, hyphens, or underscores. Your OS, browser, and IP address will be automatically detected.
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Detect OS
+    function getOS() {
+      const userAgent = window.navigator.userAgent;
+      const platform = window.navigator.platform;
+      
+      if (/Win/.test(platform)) return 'Windows';
+      if (/Mac/.test(platform)) return 'macOS';
+      if (/Linux/.test(platform)) return 'Linux';
+      if (/Android/.test(userAgent)) return 'Android';
+      if (/iPhone|iPad|iPod/.test(userAgent)) return 'iOS';
+      return 'Unknown';
+    }
+
+    // Detect Browser
+    function getBrowser() {
+      const userAgent = navigator.userAgent;
+      
+      if (userAgent.indexOf('Firefox') > -1) return 'Firefox';
+      if (userAgent.indexOf('Chrome') > -1 && userAgent.indexOf('Edg') === -1) return 'Chrome';
+      if (userAgent.indexOf('Safari') > -1 && userAgent.indexOf('Chrome') === -1) return 'Safari';
+      if (userAgent.indexOf('Edg') > -1) return 'Edge';
+      if (userAgent.indexOf('Opera') > -1 || userAgent.indexOf('OPR') > -1) return 'Opera';
+      return 'Unknown';
+    }
+
+    const form = document.getElementById('registrationForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const deviceName = document.getElementById('device-name').value.trim();
+      
+      if (!deviceName) {
+        errorMessage.textContent = 'Please enter a device name.';
+        errorMessage.style.display = 'block';
+        successMessage.style.display = 'none';
+        return;
+      }
+
+      // Disable button during submission
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Registering...';
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+
+      try {
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: deviceName,
+            os: getOS(),
+            browser: getBrowser()
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+          successMessage.style.display = 'block';
+          errorMessage.style.display = 'none';
+          form.reset();
+          setTimeout(() => {
+            successMessage.style.display = 'none';
+          }, 5000);
+        } else {
+          errorMessage.textContent = data.message || 'Registration failed. Please try again.';
+          errorMessage.style.display = 'block';
+        }
+      } catch (error) {
+        errorMessage.textContent = 'Network error. Please check your connection and try again.';
+        errorMessage.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Register Device';
+      }
+    });
+  </script>
+</body>
+</html>
