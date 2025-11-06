@@ -5,11 +5,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
-import asyncio
-import json
 import sqlite3
-import platform
-import re
 
 # Add parent directory to path to import app functions
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,13 +30,11 @@ class TelegramBot:
         self.webhook_secret = os.getenv('TELEGRAM_WEBHOOK_SECRET')
         self.web_app_url = web_app_url or os.getenv('FRONTEND_URL', 'http://localhost:8080')
         
-        # Resolve database file path - look in parent directory (project root)
+        # Resolve database file path
         if db_file is None:
-            # Get the project root directory (parent of telegram_bot folder)
             project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             self.db_file = os.path.join(project_root, "devices.db")
         else:
-            # If db_file is provided, resolve it relative to project root if it's just a filename
             if not os.path.isabs(db_file):
                 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
                 self.db_file = os.path.join(project_root, db_file)
@@ -49,8 +43,6 @@ class TelegramBot:
         
         # Verify database file exists or can be created
         try:
-            # Try to connect to database to verify it's accessible
-            import sqlite3
             conn = sqlite3.connect(self.db_file)
             conn.close()
             logger.info(f"Database connection verified: {self.db_file}")
@@ -58,7 +50,7 @@ class TelegramBot:
             logger.warning(f"Database file not accessible: {self.db_file}. Error: {e}")
             logger.warning("Bot will attempt to create database on first use.")
         
-        # Resolve the logo path relative to this file so it works regardless of CWD
+        # Resolve the logo path
         self.logo_path = os.path.join(os.path.dirname(__file__), 'repari.png')
         
         if not self.bot_token:
@@ -72,9 +64,28 @@ class TelegramBot:
         """Check if URL is HTTPS (required for Telegram Web App buttons)"""
         return url and url.lower().startswith('https://')
     
+    def _is_embeddable_domain(self, url: Optional[str]) -> bool:
+        """Return False for domains known to disallow embedding in iframes/webviews."""
+        if not url:
+            return False
+        try:
+            from urllib.parse import urlparse
+            hostname = urlparse(url).hostname or ''
+        except Exception:
+            return False
+        hostname = hostname.lower()
+        blocked = {
+            'github.com',
+            'www.github.com',
+            'github.io',
+        }
+        if hostname in blocked or hostname.endswith('.github.io'):
+            return False
+        return True
+    
     def _create_web_app_button(self, text, url):
         """Create a web app button only if URL is HTTPS, otherwise return None"""
-        if self._is_https(url):
+        if self._is_https(url) and self._is_embeddable_domain(url):
             return InlineKeyboardButton(text, web_app=WebAppInfo(url=url))
         return None
     
@@ -107,7 +118,6 @@ class TelegramBot:
         """Handle /start command"""
         user = update.effective_user
         
-        # Build welcome text with web portal info
         web_portal_info = ""
         if not self._is_https(self.web_app_url):
             web_portal_info = f"\n\n🌐 Web Portal: {self.web_app_url}\n(Use /app to get the link)"
@@ -123,13 +133,12 @@ class TelegramBot:
             f"Use /help to see all available commands."
         )
         
-        # Build keyboard - only include web app button if HTTPS
+        # Build keyboard
         keyboard = []
         web_app_btn = self._create_web_app_button("🌐 Open Web Portal", self.web_app_url)
         if web_app_btn:
             keyboard.append([web_app_btn])
         else:
-            # For HTTP, add a URL button or just skip it
             keyboard.append([InlineKeyboardButton("🔗 Web Portal Link", url=self.web_app_url)])
         
         keyboard.extend([
@@ -171,7 +180,6 @@ class TelegramBot:
             "• Use /app to get the web portal link"
         )
         
-        # Build keyboard - only include web app button if HTTPS
         keyboard = []
         web_app_btn = self._create_web_app_button("🌐 Open Web Portal", self.web_app_url)
         if web_app_btn:
@@ -190,7 +198,6 @@ class TelegramBot:
     
     async def open_app_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /app command to open the web portal"""
-        # Build keyboard - only include web app button if HTTPS
         keyboard = []
         web_app_btn = self._create_web_app_button("🌐 Open Web Portal", self.web_app_url)
         
@@ -198,7 +205,6 @@ class TelegramBot:
             keyboard.append([web_app_btn])
             message_text = "Click the button below to open the device registration portal:"
         else:
-            # For HTTP URLs, provide the link as a URL button
             keyboard.append([InlineKeyboardButton("🔗 Open Web Portal", url=self.web_app_url)])
             message_text = (
                 f"Click the button below to open the device registration portal:\n\n"
@@ -236,12 +242,11 @@ class TelegramBot:
             )
             return WAITING_FOR_DEVICE_NAME
         
-        # Detect OS and Browser from user agent (Telegram doesn't provide this directly)
-        # We'll use generic values for Telegram
+        # Detect OS and Browser from user agent
         os_name = "Telegram"
         browser = "Telegram Bot"
         user = update.effective_user
-        ip = "N/A"  # Telegram doesn't provide IP in updates
+        ip = "N/A"
         
         # Register device in database
         try:
@@ -252,6 +257,7 @@ class TelegramBot:
                 )
                 conn.commit()
             
+            logger.info(f"Device registered via bot: {device_name}")
             await update.message.reply_text(
                 f"✅ <b>Device Registered Successfully!</b>\n\n"
                 f"Device Name: {device_name}\n"
@@ -299,7 +305,6 @@ class TelegramBot:
             
             # Split message if too long
             if len(text) > 4096:
-                # Send in chunks
                 chunks = [text[i:i+4096] for i in range(0, len(text), 4096)]
                 for chunk in chunks:
                     await update.message.reply_text(chunk, parse_mode='HTML')
@@ -366,7 +371,7 @@ class TelegramBot:
                 "Use /help to see all commands or /register to register a device."
             )
         
-        # Build keyboard - only include web app button if HTTPS
+        # Build keyboard
         keyboard = []
         web_app_btn = self._create_web_app_button("🌐 Open Web Portal", self.web_app_url)
         if web_app_btn:
@@ -429,7 +434,7 @@ class TelegramBot:
             await self.start_command(update, context)
     
     async def webhook_handler(self, request):
-        """Handle incoming webhook requests"""
+        """Handle incoming webhook requests - for use with webhook_server.py"""
         try:
             # Parse the incoming update
             update_data = await request.json()
@@ -447,40 +452,36 @@ class TelegramBot:
         """Set the webhook URL for the bot"""
         if self.webhook_url:
             webhook_url = f"{self.webhook_url}/webhook"
+            secret_token = self.webhook_secret
+            
             await self.application.bot.set_webhook(
                 url=webhook_url,
-                secret_token=self.webhook_secret
+                secret_token=secret_token,
+                drop_pending_updates=True
             )
             logger.info(f"Webhook set to: {webhook_url}")
+            
+            # Verify webhook info
+            webhook_info = await self.application.bot.get_webhook_info()
+            logger.info(f"Webhook info: {webhook_info.to_dict()}")
         else:
             logger.warning("No webhook URL configured. Bot will use polling mode.")
     
-    async def start_polling(self):
-        """Start the bot in polling mode"""
+    async def delete_webhook(self):
+        """Delete the webhook (use for polling mode)"""
+        await self.application.bot.delete_webhook(drop_pending_updates=True)
+        logger.info("Webhook deleted - bot running in polling mode")
+    
+    def run_polling(self):
+        """Start the bot in polling mode using the v20+ run_polling API"""
         logger.info("=" * 60)
         logger.info("🚀 Starting Telegram Bot in polling mode...")
         logger.info(f"📁 Database: {self.db_file}")
         logger.info(f"🌐 Web App URL: {self.web_app_url}")
         logger.info("=" * 60)
         
-        await self.application.initialize()
-        await self.application.start()
-        await self.application.updater.start_polling()
-        
-        logger.info("✅ Bot is running and ready to receive commands!")
-        logger.info("Press Ctrl+C to stop the bot")
-        
-        # Keep the bot running
-        try:
-            await asyncio.Event().wait()
-        except KeyboardInterrupt:
-            logger.info("\nBot stopped by user")
-        finally:
-            logger.info("Shutting down bot...")
-            await self.application.updater.stop()
-            await self.application.stop()
-            await self.application.shutdown()
-            logger.info("Bot shutdown complete")
+        # This handles initialize/start/polling/idle/shutdown internally
+        self.application.run_polling()
 
 def main():
     """Main function to run the bot standalone"""
@@ -499,8 +500,8 @@ def main():
         print("\nStarting bot in polling mode...")
         print("Press Ctrl+C to stop the bot\n")
         
-        # Always use polling mode when run directly
-        asyncio.run(bot.start_polling())
+        # Always use polling mode when run directly (synchronous)
+        bot.run_polling()
             
     except KeyboardInterrupt:
         print("\n\nBot stopped by user")

@@ -3,15 +3,20 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
 import secrets
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 # Generate a secure secret key if not set in environment
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 
 # Security settings
-app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'  # Only send over HTTPS in production
-app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('FLASK_ENV') == 'production'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = 3600  # 1 hour session timeout
 
 DB_FILE = "devices.db"
@@ -47,10 +52,8 @@ def init_admin():
             conn.commit()
         else:
             # Migrate existing plaintext passwords to hashed passwords
-            # Check if password is already hashed (hashed passwords contain $)
-            existing_password = admin[2]  # password is at index 2
+            existing_password = admin[2]
             if existing_password and '$' not in existing_password:
-                # This is a plaintext password, hash it
                 hashed_password = generate_password_hash(existing_password)
                 cur.execute("UPDATE admins SET password = ? WHERE username = ?", (hashed_password, "admin"))
                 conn.commit()
@@ -61,7 +64,6 @@ def init_admin():
         for admin_row in all_admins:
             admin_password = admin_row[2]
             if admin_password and '$' not in admin_password:
-                # This is a plaintext password, hash it
                 hashed_password = generate_password_hash(admin_password)
                 cur.execute("UPDATE admins SET password = ? WHERE id = ?", (hashed_password, admin_row[0]))
                 conn.commit()
@@ -100,17 +102,20 @@ def register_device():
     # Get IP address (handle proxy headers)
     ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     if ip:
-        ip = ip.split(',')[0].strip()  # Get first IP if multiple
+        ip = ip.split(',')[0].strip()
 
     try:
         with sqlite3.connect(DB_FILE) as conn:
             conn.execute("INSERT INTO devices (name, os, browser, ip) VALUES (?, ?, ?, ?)",
                          (name, os_name, browser, ip))
             conn.commit()
+            
+        logger.info(f"Device registered: {name} ({os_name}, {browser})")
+        return jsonify({"status": "success", "message": "Device registered successfully"})
+        
     except sqlite3.Error as e:
+        logger.error(f"Database error: {e}")
         return jsonify({"status": "error", "message": "Database error occurred"}), 500
-
-    return jsonify({"status": "success", "message": "Device registered successfully"})
 
 # --------------------- Admin area ---------------------
 @app.route("/login", methods=["GET", "POST"])
@@ -123,7 +128,6 @@ def login():
         if not username or not password:
             return render_template("admin-login.html", error="Username and password are required")
         
-        # Prevent SQL injection and limit username length
         if len(username) > 50:
             return render_template("admin-login.html", error="Invalid credentials")
         
@@ -133,18 +137,16 @@ def login():
             admin = cur.fetchone()
         
         if admin:
-            stored_password_hash = admin[2]  # password is at index 2
+            stored_password_hash = admin[2]
             
-            # Check if password is hashed (contains $) or plaintext (for migration)
             if '$' in stored_password_hash:
-                # Verify hashed password
                 if check_password_hash(stored_password_hash, password):
                     session["admin"] = username
-                    session["admin_id"] = admin[0]  # Store admin ID
-                    session.permanent = True  # Enable session timeout
+                    session["admin_id"] = admin[0]
+                    session.permanent = True
+                    logger.info(f"Admin logged in: {username}")
                     return redirect(url_for("admin_dashboard"))
             else:
-                # Legacy plaintext password - hash it and update database
                 if stored_password_hash == password:
                     hashed_password = generate_password_hash(password)
                     with sqlite3.connect(DB_FILE) as conn:
@@ -154,26 +156,26 @@ def login():
                     session["admin"] = username
                     session["admin_id"] = admin[0]
                     session.permanent = True
+                    logger.info(f"Admin logged in (migrated): {username}")
                     return redirect(url_for("admin_dashboard"))
         
-        # Invalid credentials - don't reveal which field was wrong
+        logger.warning(f"Failed login attempt for user: {username}")
         return render_template("admin-login.html", error="Invalid username or password")
     
     return render_template("admin-login.html")
 
 @app.route("/logout")
 def logout():
-    # Clear all session data
+    username = session.get("admin")
     session.clear()
+    logger.info(f"Admin logged out: {username}")
     return redirect(url_for("login"))
 
 @app.route("/admin")
 def admin_dashboard():
-    # Check if user is authenticated
     if "admin" not in session or "admin_id" not in session:
         return redirect(url_for("login"))
     
-    # Verify admin still exists in database
     with sqlite3.connect(DB_FILE) as conn:
         cur = conn.cursor()
         cur.execute("SELECT id FROM admins WHERE id=? AND username=?", (session.get("admin_id"), session.get("admin")))
@@ -181,7 +183,6 @@ def admin_dashboard():
             session.clear()
             return redirect(url_for("login"))
         
-        # Get devices
         cur.execute("SELECT id, name, os, browser, ip, registered_at FROM devices ORDER BY id DESC")
         devices = cur.fetchall()
     
@@ -212,6 +213,7 @@ def api_devices():
             "devices": devices
         })
     except Exception as e:
+        logger.error(f"API error in /api/devices: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/devices/<int:device_id>")
@@ -242,6 +244,7 @@ def api_get_device(device_id):
                     "message": "Device not found"
                 }), 404
     except Exception as e:
+        logger.error(f"API error in /api/devices/{device_id}: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/devices/check")
@@ -282,6 +285,7 @@ def api_check_device():
                     "message": "Device not found"
                 })
     except Exception as e:
+        logger.error(f"API error in /api/devices/check: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/devices/search")
@@ -325,6 +329,7 @@ def api_search_devices():
                 "devices": devices
             })
     except Exception as e:
+        logger.error(f"API error in /api/devices/search: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/devices/stats")
@@ -373,30 +378,36 @@ def api_device_stats():
                 }
             })
     except Exception as e:
+        logger.error(f"API error in /api/devices/stats: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# --------------------- Health Check ---------------------
+@app.route("/health")
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        "status": "healthy",
+        "service": "device-registration-portal"
+    })
 
 # --------------------- Main ---------------------
 if __name__ == "__main__":
     init_db()
     init_admin()
     
-    print("=" * 50)
-    print("Device Registration Portal")
-    print("=" * 50)
-    print(f"Web Portal: http://localhost:8080")
-    print(f"Admin Login: http://localhost:8080/login")
-    print(f"\nAPI Endpoints:")
+    print("=" * 60)
+    print("🚀 Device Registration Portal")
+    print("=" * 60)
+    print(f"📍 Web Portal: http://localhost:8080")
+    print(f"🔐 Admin Login: http://localhost:8080/login")
+    print(f"❤️  Health Check: http://localhost:8080/health")
+    print("\n📚 API Endpoints:")
     print(f"  GET  /api/devices - Get all devices")
     print(f"  GET  /api/devices/<id> - Get device by ID")
     print(f"  GET  /api/devices/check?name=<name> - Check if device exists")
     print(f"  GET  /api/devices/search?q=<query> - Search devices")
     print(f"  GET  /api/devices/stats - Get device statistics")
-    print(f"\nWebhook Endpoint: http://localhost:8080/webhook")
-    print("=" * 50)
-    print("\nNote: Telegram bot runs separately using:")
-    print("  python telegram_bot/run.py")
-    print("  or")
-    print("  python telegram_bot/bot.py")
-    print("=" * 50)
+    print("\n💡 Note: Telegram bot runs separately on port 8081")
+    print("=" * 60)
     
     app.run(host="0.0.0.0", port=8080, debug=True)
