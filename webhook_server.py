@@ -70,6 +70,9 @@ class WebhookServer:
     async def on_startup(self, app):
         """Run on server startup"""
         logger.info("Starting webhook server...")
+        # Initialize and start PTB Application for webhook processing
+        await self.bot.application.initialize()
+        await self.bot.application.start()
         
         # Set webhook URL
         webhook_url = os.environ.get("TELEGRAM_WEBHOOK_URL")
@@ -93,6 +96,7 @@ class WebhookServer:
     async def on_shutdown(self, app):
         """Run on server shutdown"""
         logger.info("Shutting down webhook server...")
+        await self.bot.application.stop()
         await self.bot.application.shutdown()
     
     def run(self):
