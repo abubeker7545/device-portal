@@ -1,10 +1,13 @@
 import os
 import sys
 import logging
+import asyncio
 from typing import Optional
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+from telegram.error import TimedOut, NetworkError
+from telegram.request import HTTPXRequest
 import sqlite3
 
 # Add parent directory to path to import app functions
@@ -56,7 +59,15 @@ class TelegramBot:
         if not self.bot_token:
             raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
         
-        self.application = Application.builder().token(self.bot_token).build()
+        # Configure request with longer timeout for file uploads
+        request = HTTPXRequest(
+            connection_pool_size=8,
+            read_timeout=30.0,  # 30 seconds for reading responses
+            write_timeout=30.0,  # 30 seconds for sending requests
+            connect_timeout=10.0,  # 10 seconds for connection
+        )
+        
+        self.application = Application.builder().token(self.bot_token).request(request).build()
         self._setup_handlers()
         logger.info("Bot handlers setup complete")
     
@@ -147,16 +158,35 @@ class TelegramBot:
         ])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        # Try to send logo, fallback to text
+        # Try to send logo, fallback to text on timeout or file errors
         try:
             with open(self.logo_path, 'rb') as logo_file:
-                await update.message.reply_photo(
-                    photo=logo_file,
-                    caption=welcome_text,
-                    reply_markup=reply_markup,
-                    parse_mode='HTML'
-                )
+                try:
+                    await asyncio.wait_for(
+                        update.message.reply_photo(
+                            photo=logo_file,
+                            caption=welcome_text,
+                            reply_markup=reply_markup,
+                            parse_mode='HTML'
+                        ),
+                        timeout=25.0  # 25 second timeout for photo upload
+                    )
+                except (TimedOut, NetworkError, asyncio.TimeoutError) as e:
+                    logger.warning(f"Timeout or network error sending photo: {e}. Falling back to text message.")
+                    await update.message.reply_text(
+                        welcome_text,
+                        reply_markup=reply_markup,
+                        parse_mode='HTML'
+                    )
         except FileNotFoundError:
+            logger.warning(f"Logo file not found: {self.logo_path}. Sending text message.")
+            await update.message.reply_text(
+                welcome_text,
+                reply_markup=reply_markup,
+                parse_mode='HTML'
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error sending photo: {e}. Falling back to text message.")
             await update.message.reply_text(
                 welcome_text,
                 reply_markup=reply_markup,

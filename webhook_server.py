@@ -3,7 +3,7 @@ import logging
 import asyncio
 from aiohttp import web
 from telegram import Update
-from telegram_bot.bot import TelegramBot
+from bot import TelegramBot
 
 # Configure logging
 logging.basicConfig(
