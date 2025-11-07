@@ -5,7 +5,7 @@ import threading
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from telegram import Update
-from telegram_bot.bot import TelegramBot
+from bot import TelegramBot
 
 load_dotenv()
 app = Flask(__name__)
