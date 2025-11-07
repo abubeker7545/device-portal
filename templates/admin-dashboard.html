@@ -110,6 +110,44 @@
       letter-spacing: 0.5px;
     }
 
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-edit,
+    .btn-delete {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-edit {
+      background: rgba(59, 130, 246, 0.1);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-edit:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+
+    .btn-delete {
+      background: rgba(239, 68, 68, 0.1);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-delete:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
     td {
       padding: 16px;
       border-bottom: 1px solid rgba(71, 85, 105, 0.2);
@@ -203,6 +241,151 @@
       margin-left: 12px;
     }
 
+    .device-card-actions {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(71, 85, 105, 0.3);
+      display: flex;
+      gap: 8px;
+    }
+
+    .device-card-actions .btn-edit,
+    .device-card-actions .btn-delete {
+      flex: 1;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 12px;
+      padding: 32px;
+      margin: 10% auto;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      margin-bottom: 24px;
+    }
+
+    .modal-header h2 {
+      font-size: 24px;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+
+    .modal-close {
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .modal-close:hover {
+      color: #f1f5f9;
+    }
+
+    .modal-form-group {
+      margin-bottom: 20px;
+    }
+
+    .modal-form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    .modal-form-group input {
+      width: 100%;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 14px;
+    }
+
+    .modal-form-group input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .modal-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-btn-save {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .modal-btn-save:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+
+    .modal-btn-cancel {
+      background: rgba(71, 85, 105, 0.3);
+      color: #cbd5e1;
+      border: 1px solid rgba(71, 85, 105, 0.5);
+    }
+
+    .modal-btn-cancel:hover {
+      background: rgba(71, 85, 105, 0.4);
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      display: none;
+      font-size: 14px;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
     @media (max-width: 768px) {
       .header {
         flex-direction: column;
@@ -285,17 +468,30 @@
             <th>Browser</th>
             <th>IP Address</th>
             <th>Registered Date</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for device in devices %}
-          <tr>
+          <tr data-device-id="{{ device[0] }}">
             <td>{{ device[0] }}</td>
             <td>{{ device[1] }}</td>
             <td><span class="badge badge-os">{{ device[2] }}</span></td>
             <td><span class="badge badge-browser">{{ device[3] }}</span></td>
             <td>{{ device[4] }}</td>
             <td>{{ device[5] }}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn-edit" 
+                        data-device-id="{{ device[0] }}"
+                        data-device-name="{{ device[1] }}"
+                        data-device-os="{{ device[2] }}"
+                        data-device-browser="{{ device[3] }}">Edit</button>
+                <button class="btn-delete" 
+                        data-device-id="{{ device[0] }}"
+                        data-device-name="{{ device[1] }}">Delete</button>
+              </div>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -303,7 +499,7 @@
 
       <!-- Mobile Card View -->
       {% for device in devices %}
-      <div class="device-card">
+      <div class="device-card" data-device-id="{{ device[0] }}">
         <div class="device-card-header">
           <span class="device-card-id">Device #{{ device[0] }}</span>
         </div>
@@ -327,6 +523,16 @@
           <span class="device-card-label">Registered:</span>
           <span class="device-card-value">{{ device[5] }}</span>
         </div>
+        <div class="device-card-actions">
+          <button class="btn-edit" 
+                  data-device-id="{{ device[0] }}"
+                  data-device-name="{{ device[1] }}"
+                  data-device-os="{{ device[2] }}"
+                  data-device-browser="{{ device[3] }}">Edit</button>
+          <button class="btn-delete" 
+                  data-device-id="{{ device[0] }}"
+                  data-device-name="{{ device[1] }}">Delete</button>
+        </div>
       </div>
       {% endfor %}
       {% else %}
@@ -336,5 +542,177 @@
       {% endif %}
     </div>
   </div>
+
+  <!-- Edit Device Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <h2>Edit Device</h2>
+      </div>
+      <div id="alertContainer"></div>
+      <form id="editForm">
+        <input type="hidden" id="editDeviceId" />
+        <div class="modal-form-group">
+          <label for="editDeviceName">Device Name</label>
+          <input type="text" id="editDeviceName" required />
+        </div>
+        <div class="modal-form-group">
+          <label for="editDeviceOS">Operating System</label>
+          <input type="text" id="editDeviceOS" required />
+        </div>
+        <div class="modal-form-group">
+          <label for="editDeviceBrowser">Browser</label>
+          <input type="text" id="editDeviceBrowser" required />
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="modal-btn modal-btn-save">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentDeviceId = null;
+
+    // Event delegation for edit buttons
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('btn-edit')) {
+        const id = e.target.getAttribute('data-device-id');
+        const name = e.target.getAttribute('data-device-name');
+        const os = e.target.getAttribute('data-device-os');
+        const browser = e.target.getAttribute('data-device-browser');
+        editDevice(id, name, os, browser);
+      } else if (e.target.classList.contains('btn-delete')) {
+        const id = e.target.getAttribute('data-device-id');
+        const name = e.target.getAttribute('data-device-name');
+        deleteDevice(id, name);
+      }
+    });
+
+    function editDevice(id, name, os, browser) {
+      currentDeviceId = id;
+      document.getElementById('editDeviceId').value = id;
+      document.getElementById('editDeviceName').value = name || '';
+      document.getElementById('editDeviceOS').value = os || '';
+      document.getElementById('editDeviceBrowser').value = browser || '';
+      document.getElementById('editModal').style.display = 'block';
+      hideAlert();
+    }
+
+    function closeModal() {
+      document.getElementById('editModal').style.display = 'none';
+      document.getElementById('editForm').reset();
+      hideAlert();
+    }
+
+    function deleteDevice(id, name) {
+      if (confirm(`Are you sure you want to delete device "${name}" (ID: ${id})? This action cannot be undone.`)) {
+        fetch(`/api/devices/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            // Remove the row from the table
+            const row = document.querySelector(`tr[data-device-id="${id}"]`);
+            if (row) {
+              row.remove();
+            }
+            // Remove from card view if exists
+            const card = document.querySelector(`.device-card[data-device-id="${id}"]`);
+            if (card) {
+              card.remove();
+            }
+            // Show success message
+            showAlert('Device deleted successfully!', 'success');
+            // Reload page after 1 second to refresh the list
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            showAlert(data.message || 'Failed to delete device', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showAlert('An error occurred while deleting the device', 'error');
+        });
+      }
+    }
+
+    document.getElementById('editForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const deviceId = document.getElementById('editDeviceId').value;
+      const name = document.getElementById('editDeviceName').value.trim();
+      const os = document.getElementById('editDeviceOS').value.trim();
+      const browser = document.getElementById('editDeviceBrowser').value.trim();
+
+      if (!name || !os || !browser) {
+        showAlert('Please fill in all fields', 'error');
+        return;
+      }
+
+      fetch(`/api/devices/${deviceId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: name,
+          os: os,
+          browser: browser
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          showAlert('Device updated successfully!', 'success');
+          // Reload page after 1 second to show updated data
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          showAlert(data.message || 'Failed to update device', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showAlert('An error occurred while updating the device', 'error');
+      });
+    });
+
+    function showAlert(message, type) {
+      const container = document.getElementById('alertContainer');
+      container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+      const alert = container.querySelector('.alert');
+      alert.style.display = 'block';
+    }
+
+    function hideAlert() {
+      const container = document.getElementById('alertContainer');
+      container.innerHTML = '';
+    }
+
+    // Close modal when clicking outside of it
+    window.onclick = function(event) {
+      const modal = document.getElementById('editModal');
+      if (event.target == modal) {
+        closeModal();
+      }
+    }
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    });
+  </script>
 </body>
 </html>

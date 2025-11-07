@@ -381,6 +381,80 @@ def api_device_stats():
         logger.error(f"API error in /api/devices/stats: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --------------------- Admin Device Management ---------------------
+@app.route("/api/devices/<int:device_id>", methods=["PUT"])
+def api_update_device(device_id):
+    """Update a device (admin only)"""
+    if "admin" not in session or "admin_id" not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Content-Type must be application/json"}), 400
+    
+    data = request.get_json()
+    name = data.get("name", "").strip()
+    os_name = data.get("os", "").strip()
+    browser = data.get("browser", "").strip()
+    
+    # Input validation
+    if not name:
+        return jsonify({"status": "error", "message": "Device name is required"}), 400
+    
+    if len(name) > 100:
+        return jsonify({"status": "error", "message": "Device name is too long"}), 400
+    if len(os_name) > 50:
+        return jsonify({"status": "error", "message": "OS name is too long"}), 400
+    if len(browser) > 50:
+        return jsonify({"status": "error", "message": "Browser name is too long"}), 400
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            # Check if device exists
+            cur.execute("SELECT id FROM devices WHERE id=?", (device_id,))
+            if not cur.fetchone():
+                return jsonify({"status": "error", "message": "Device not found"}), 404
+            
+            # Update device
+            cur.execute("""
+                UPDATE devices 
+                SET name=?, os=?, browser=? 
+                WHERE id=?
+            """, (name, os_name, browser, device_id))
+            conn.commit()
+            
+            logger.info(f"Device {device_id} updated by admin: {session.get('admin')}")
+            return jsonify({"status": "success", "message": "Device updated successfully"})
+            
+    except sqlite3.Error as e:
+        logger.error(f"Database error updating device: {e}")
+        return jsonify({"status": "error", "message": "Database error occurred"}), 500
+
+@app.route("/api/devices/<int:device_id>", methods=["DELETE"])
+def api_delete_device(device_id):
+    """Delete a device (admin only)"""
+    if "admin" not in session or "admin_id" not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            # Check if device exists
+            cur.execute("SELECT id FROM devices WHERE id=?", (device_id,))
+            if not cur.fetchone():
+                return jsonify({"status": "error", "message": "Device not found"}), 404
+            
+            # Delete device
+            cur.execute("DELETE FROM devices WHERE id=?", (device_id,))
+            conn.commit()
+            
+            logger.info(f"Device {device_id} deleted by admin: {session.get('admin')}")
+            return jsonify({"status": "success", "message": "Device deleted successfully"})
+            
+    except sqlite3.Error as e:
+        logger.error(f"Database error deleting device: {e}")
+        return jsonify({"status": "error", "message": "Database error occurred"}), 500
+
 # --------------------- Health Check ---------------------
 @app.route("/health")
 def health_check():
