@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 # Conversation states
 WAITING_FOR_DEVICE_NAME = 1
+WAITING_FOR_SERIAL_NUMBER = 2
 
 class TelegramBot:
     def __init__(self, db_file=None, web_app_url=None):
@@ -107,6 +108,7 @@ class TelegramBot:
             entry_points=[CommandHandler("register", self.register_command)],
             states={
                 WAITING_FOR_DEVICE_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.register_device_name)],
+                WAITING_FOR_SERIAL_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, self.register_serial_number)],
             },
             fallbacks=[CommandHandler("cancel", self.cancel_command)],
         )
@@ -272,28 +274,60 @@ class TelegramBot:
             )
             return WAITING_FOR_DEVICE_NAME
         
+        context.user_data['device_name'] = device_name
+        
+        await update.message.reply_text(
+            f"Great! Now please send me the <b>Serial Number</b> for '{device_name}'.\n\n"
+            "This is usually a unique identifier for your device.",
+            parse_mode='HTML'
+        )
+        return WAITING_FOR_SERIAL_NUMBER
+
+    async def register_serial_number(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle serial number input for registration"""
+        serial_number = update.message.text.strip()
+        device_name = context.user_data.get('device_name')
+        
+        if not serial_number or len(serial_number) > 100:
+            await update.message.reply_text(
+                "❌ Invalid serial number. Please provide a valid serial number (max 100 characters).\n"
+                "Type /cancel to cancel."
+            )
+            return WAITING_FOR_SERIAL_NUMBER
+        
         # Detect OS and Browser from user agent
         os_name = "Telegram"
         browser = "Telegram Bot"
-        user = update.effective_user
         ip = "N/A"
         
         # Register device in database
         try:
             with sqlite3.connect(self.db_file) as conn:
+                # Check if serial number already exists
+                cur = conn.cursor()
+                cur.execute("SELECT id FROM devices WHERE serial_number = ?", (serial_number,))
+                if cur.fetchone():
+                    await update.message.reply_text(
+                        f"❌ Serial number <code>{serial_number}</code> is already registered.\n"
+                        "Please provide a different serial number or type /cancel.",
+                        parse_mode='HTML'
+                    )
+                    return WAITING_FOR_SERIAL_NUMBER
+
                 conn.execute(
-                    "INSERT INTO devices (name, os, browser, ip) VALUES (?, ?, ?, ?)",
-                    (device_name, os_name, browser, ip)
+                    "INSERT INTO devices (name, serial_number, os, browser, ip, is_authorized) VALUES (?, ?, ?, ?, ?, 0)",
+                    (device_name, serial_number, os_name, browser, ip)
                 )
                 conn.commit()
             
-            logger.info(f"Device registered via bot: {device_name}")
+            logger.info(f"Device registered via bot: {device_name} (SN: {serial_number})")
             await update.message.reply_text(
                 f"✅ <b>Device Registered Successfully!</b>\n\n"
                 f"Device Name: {device_name}\n"
+                f"Serial Number: {serial_number}\n"
                 f"OS: {os_name}\n"
                 f"Browser: {browser}\n\n"
-                f"Your device has been registered in the system.",
+                f"Your device has been registered and is awaiting admin authorization.",
                 parse_mode='HTML'
             )
         except Exception as e:

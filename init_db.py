@@ -11,9 +11,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS devices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
+            serial_number TEXT UNIQUE,
             os TEXT,
             browser TEXT,
             ip TEXT,
+            is_authorized INTEGER DEFAULT 0,
             registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
         """)

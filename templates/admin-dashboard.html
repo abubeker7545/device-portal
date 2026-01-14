@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -187,6 +188,45 @@
       border: 1px solid rgba(10, 165, 180, 0.3);
     }
 
+    .badge-status {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+
+    .badge-authorized {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-pending {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-authorize {
+      background: rgba(16, 185, 129, 0.1);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-authorize:hover {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+    }
+
+    .btn-deauthorize {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .btn-deauthorize:hover {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -232,6 +272,63 @@
     .device-card-label {
       color: #94a3b8;
       font-weight: 500;
+    }
+
+    .manual-auth-box {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(71, 85, 105, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .manual-auth-box h2 {
+      font-size: 18px;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .manual-auth-form {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .manual-auth-input {
+      flex: 1;
+      min-width: 250px;
+      padding: 10px 16px;
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      border-radius: 8px;
+      color: #f1f5f9;
+      font-size: 14px;
+    }
+
+    .manual-auth-input:focus {
+      outline: none;
+      border-color: #10b981;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .manual-auth-btn {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .manual-auth-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
     }
 
     .device-card-value {
@@ -424,6 +521,7 @@
     }
 
     @media (min-width: 769px) {
+
       /* Hide card view on desktop */
       .device-card {
         display: none;
@@ -434,7 +532,8 @@
         display: table;
       }
 
-      th, td {
+      th,
+      td {
         padding: 12px;
         font-size: 13px;
       }
@@ -446,6 +545,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
@@ -456,6 +556,18 @@
       </div>
     </div>
 
+    <div class="manual-auth-box">
+      <div>
+        <h2>Manual Serial Authorization</h2>
+        <p style="font-size: 13px; color: #94a3b8;">Directly authorize a device by entering its serial number.</p>
+      </div>
+      <form class="manual-auth-form" id="manualAuthForm">
+        <input type="text" id="manualSerialNumber" class="manual-auth-input" placeholder="Enter Serial Number..."
+          required>
+        <button type="submit" class="manual-auth-btn">Authorize SN</button>
+      </form>
+    </div>
+
     <div class="table-wrapper">
       {% if devices %}
       <!-- Desktop Table View -->
@@ -464,32 +576,46 @@
           <tr>
             <th>Device ID</th>
             <th>Device Name</th>
-            <th>Operating System</th>
-            <th>Browser</th>
+            <th>Serial Number</th>
+            <th>OS / Browser</th>
             <th>IP Address</th>
+            <th>Status</th>
             <th>Registered Date</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for device in devices %}
-          <tr data-device-id="{{ device[0] }}">
-            <td>{{ device[0] }}</td>
-            <td>{{ device[1] }}</td>
-            <td><span class="badge badge-os">{{ device[2] }}</span></td>
-            <td><span class="badge badge-browser">{{ device[3] }}</span></td>
-            <td>{{ device[4] }}</td>
-            <td>{{ device[5] }}</td>
+          <tr data-device-id="{{ device.id }}">
+            <td>{{ device.id }}</td>
+            <td>{{ device.name }}</td>
+            <td><code>{{ device.serial_number }}</code></td>
+            <td>
+              <span class="badge badge-os">{{ device.os }}</span>
+              <span class="badge badge-browser">{{ device.browser }}</span>
+            </td>
+            <td>{{ device.ip }}</td>
+            <td>
+              {% if device.is_authorized %}
+              <span class="badge badge-status badge-authorized">Authorized</span>
+              {% else %}
+              <span class="badge badge-status badge-pending">Pending</span>
+              {% endif %}
+            </td>
+            <td>{{ device.registered_at }}</td>
             <td>
               <div class="action-buttons">
-                <button class="btn-edit" 
-                        data-device-id="{{ device[0] }}"
-                        data-device-name="{{ device[1] }}"
-                        data-device-os="{{ device[2] }}"
-                        data-device-browser="{{ device[3] }}">Edit</button>
-                <button class="btn-delete" 
-                        data-device-id="{{ device[0] }}"
-                        data-device-name="{{ device[1] }}">Delete</button>
+                {% if device.is_authorized %}
+                <button class="btn-deauthorize" data-device-id="{{ device.id }}"
+                  data-action="deauthorize">Revoke</button>
+                {% else %}
+                <button class="btn-authorize" data-device-id="{{ device.id }}"
+                  data-action="authorize">Authorize</button>
+                {% endif %}
+                <button class="btn-edit" data-device-id="{{ device.id }}" data-device-name="{{ device.name }}"
+                  data-device-os="{{ device.os }}" data-device-browser="{{ device.browser }}">Edit</button>
+                <button class="btn-delete" data-device-id="{{ device.id }}"
+                  data-device-name="{{ device.name }}">Delete</button>
               </div>
             </td>
           </tr>
@@ -499,39 +625,49 @@
 
       <!-- Mobile Card View -->
       {% for device in devices %}
-      <div class="device-card" data-device-id="{{ device[0] }}">
+      <div class="device-card" data-device-id="{{ device.id }}">
         <div class="device-card-header">
-          <span class="device-card-id">Device #{{ device[0] }}</span>
+          <span class="device-card-id">Device #{{ device.id }}</span>
+          {% if device.is_authorized %}
+          <span class="badge badge-status badge-authorized">Authorized</span>
+          {% else %}
+          <span class="badge badge-status badge-pending">Pending</span>
+          {% endif %}
         </div>
         <div class="device-card-field">
           <span class="device-card-label">Name:</span>
-          <span class="device-card-value">{{ device[1] }}</span>
+          <span class="device-card-value">{{ device.name }}</span>
+        </div>
+        <div class="device-card-field">
+          <span class="device-card-label">SN:</span>
+          <span class="device-card-value"><code>{{ device.serial_number }}</code></span>
         </div>
         <div class="device-card-field">
           <span class="device-card-label">OS:</span>
-          <span class="device-card-value"><span class="badge badge-os">{{ device[2] }}</span></span>
+          <span class="device-card-value"><span class="badge badge-os">{{ device.os }}</span></span>
         </div>
         <div class="device-card-field">
           <span class="device-card-label">Browser:</span>
-          <span class="device-card-value"><span class="badge badge-browser">{{ device[3] }}</span></span>
+          <span class="device-card-value"><span class="badge badge-browser">{{ device.browser }}</span></span>
         </div>
         <div class="device-card-field">
           <span class="device-card-label">IP Address:</span>
-          <span class="device-card-value">{{ device[4] }}</span>
+          <span class="device-card-value">{{ device.ip }}</span>
         </div>
         <div class="device-card-field">
           <span class="device-card-label">Registered:</span>
-          <span class="device-card-value">{{ device[5] }}</span>
+          <span class="device-card-value">{{ device.registered_at }}</span>
         </div>
         <div class="device-card-actions">
-          <button class="btn-edit" 
-                  data-device-id="{{ device[0] }}"
-                  data-device-name="{{ device[1] }}"
-                  data-device-os="{{ device[2] }}"
-                  data-device-browser="{{ device[3] }}">Edit</button>
-          <button class="btn-delete" 
-                  data-device-id="{{ device[0] }}"
-                  data-device-name="{{ device[1] }}">Delete</button>
+          {% if device.is_authorized %}
+          <button class="btn-deauthorize" data-device-id="{{ device.id }}" data-action="deauthorize">Revoke</button>
+          {% else %}
+          <button class="btn-authorize" data-device-id="{{ device.id }}" data-action="authorize">Authorize</button>
+          {% endif %}
+          <button class="btn-edit" data-device-id="{{ device.id }}" data-device-name="{{ device.name }}"
+            data-device-os="{{ device.os }}" data-device-browser="{{ device.browser }}">Edit</button>
+          <button class="btn-delete" data-device-id="{{ device.id }}"
+            data-device-name="{{ device.name }}">Delete</button>
         </div>
       </div>
       {% endfor %}
@@ -576,8 +712,8 @@
   <script>
     let currentDeviceId = null;
 
-    // Event delegation for edit buttons
-    document.addEventListener('click', function(e) {
+    // Event delegation for cards and tables
+    document.addEventListener('click', function (e) {
       if (e.target.classList.contains('btn-edit')) {
         const id = e.target.getAttribute('data-device-id');
         const name = e.target.getAttribute('data-device-name');
@@ -588,6 +724,12 @@
         const id = e.target.getAttribute('data-device-id');
         const name = e.target.getAttribute('data-device-name');
         deleteDevice(id, name);
+      } else if (e.target.classList.contains('btn-authorize')) {
+        const id = e.target.getAttribute('data-device-id');
+        toggleAuthorization(id, true);
+      } else if (e.target.classList.contains('btn-deauthorize')) {
+        const id = e.target.getAttribute('data-device-id');
+        toggleAuthorization(id, false);
       }
     });
 
@@ -607,6 +749,59 @@
       hideAlert();
     }
 
+    function toggleAuthorization(id, authorize) {
+      const action = authorize ? 'authorize' : 'deauthorize';
+      if (confirm(`Are you sure you want to ${action} this device?`)) {
+        fetch(`/api/devices/${id}/authorize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ authorize: authorize })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              window.location.reload();
+            } else {
+              alert(data.message || 'Error occurred');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Network error');
+          });
+      }
+    }
+
+    // Manual Serial Authorization
+    document.getElementById('manualAuthForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const sn = document.getElementById('manualSerialNumber').value.trim();
+      if (!sn) return;
+
+      fetch('/api/devices/authorize-serial', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ serial_number: sn, authorize: true })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message || 'Error occurred');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Network error');
+        });
+    });
+
     function deleteDevice(id, name) {
       if (confirm(`Are you sure you want to delete device "${name}" (ID: ${id})? This action cannot be undone.`)) {
         fetch(`/api/devices/${id}`, {
@@ -615,39 +810,39 @@
             'Content-Type': 'application/json'
           }
         })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status === 'success') {
-            // Remove the row from the table
-            const row = document.querySelector(`tr[data-device-id="${id}"]`);
-            if (row) {
-              row.remove();
+          .then(response => response.json())
+          .then(data => {
+            if (data.status === 'success') {
+              // Remove the row from the table
+              const row = document.querySelector(`tr[data-device-id="${id}"]`);
+              if (row) {
+                row.remove();
+              }
+              // Remove from card view if exists
+              const card = document.querySelector(`.device-card[data-device-id="${id}"]`);
+              if (card) {
+                card.remove();
+              }
+              // Show success message
+              showAlert('Device deleted successfully!', 'success');
+              // Reload page after 1 second to refresh the list
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            } else {
+              showAlert(data.message || 'Failed to delete device', 'error');
             }
-            // Remove from card view if exists
-            const card = document.querySelector(`.device-card[data-device-id="${id}"]`);
-            if (card) {
-              card.remove();
-            }
-            // Show success message
-            showAlert('Device deleted successfully!', 'success');
-            // Reload page after 1 second to refresh the list
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-          } else {
-            showAlert(data.message || 'Failed to delete device', 'error');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          showAlert('An error occurred while deleting the device', 'error');
-        });
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            showAlert('An error occurred while deleting the device', 'error');
+          });
       }
     }
 
-    document.getElementById('editForm').addEventListener('submit', function(e) {
+    document.getElementById('editForm').addEventListener('submit', function (e) {
       e.preventDefault();
-      
+
       const deviceId = document.getElementById('editDeviceId').value;
       const name = document.getElementById('editDeviceName').value.trim();
       const os = document.getElementById('editDeviceOS').value.trim();
@@ -669,22 +864,22 @@
           browser: browser
         })
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.status === 'success') {
-          showAlert('Device updated successfully!', 'success');
-          // Reload page after 1 second to show updated data
-          setTimeout(() => {
-            window.location.reload();
-          }, 1000);
-        } else {
-          showAlert(data.message || 'Failed to update device', 'error');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        showAlert('An error occurred while updating the device', 'error');
-      });
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'success') {
+            showAlert('Device updated successfully!', 'success');
+            // Reload page after 1 second to show updated data
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          } else {
+            showAlert(data.message || 'Failed to update device', 'error');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showAlert('An error occurred while updating the device', 'error');
+        });
     });
 
     function showAlert(message, type) {
@@ -700,7 +895,7 @@
     }
 
     // Close modal when clicking outside of it
-    window.onclick = function(event) {
+    window.onclick = function (event) {
       const modal = document.getElementById('editModal');
       if (event.target == modal) {
         closeModal();
@@ -708,11 +903,12 @@
     }
 
     // Close modal with Escape key
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape') {
         closeModal();
       }
     });
   </script>
 </body>
+
 </html>

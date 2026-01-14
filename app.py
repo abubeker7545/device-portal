@@ -27,11 +27,36 @@ def init_db():
         conn.execute("""CREATE TABLE IF NOT EXISTS devices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT,
+            serial_number TEXT UNIQUE,
             os TEXT,
             browser TEXT,
             ip TEXT,
+            is_authorized INTEGER DEFAULT 0,
             registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )""")
+        
+        # Migration: Check if serial_number and is_authorized columns exist
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(devices)")
+        columns = [column[1] for column in cur.fetchall()]
+        
+        if 'serial_number' not in columns:
+            try:
+                # SQLite doesn't support UNIQUE constraint in ALTER TABLE ADD COLUMN
+                conn.execute("ALTER TABLE devices ADD COLUMN serial_number TEXT")
+                conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_serial_number ON devices(serial_number)")
+                logger.info("Added serial_number column and unique index to devices table")
+            except sqlite3.OperationalError as e:
+                logger.error(f"Error adding serial_number column: {e}")
+                pass
+        
+        if 'is_authorized' not in columns:
+            try:
+                conn.execute("ALTER TABLE devices ADD COLUMN is_authorized INTEGER DEFAULT 0")
+                logger.info("Added is_authorized column to devices table")
+            except sqlite3.OperationalError:
+                pass
+        
         conn.execute("""CREATE TABLE IF NOT EXISTS admins (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
@@ -84,6 +109,7 @@ def register_device():
         return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
     
     name = data.get("name", "").strip()
+    serial_number = data.get("serial_number", "").strip()
     os_name = data.get("os", "").strip()
     browser = data.get("browser", "").strip()
     
@@ -91,9 +117,14 @@ def register_device():
     if not name:
         return jsonify({"status": "error", "message": "Device name is required"}), 400
     
+    if not serial_number:
+        return jsonify({"status": "error", "message": "Serial number is required"}), 400
+    
     # Sanitize input - limit lengths
     if len(name) > 100:
         return jsonify({"status": "error", "message": "Device name is too long"}), 400
+    if len(serial_number) > 100:
+        return jsonify({"status": "error", "message": "Serial number is too long"}), 400
     if len(os_name) > 50:
         return jsonify({"status": "error", "message": "OS name is too long"}), 400
     if len(browser) > 50:
@@ -106,12 +137,18 @@ def register_device():
 
     try:
         with sqlite3.connect(DB_FILE) as conn:
-            conn.execute("INSERT INTO devices (name, os, browser, ip) VALUES (?, ?, ?, ?)",
-                         (name, os_name, browser, ip))
+            # Check if serial number already exists
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM devices WHERE serial_number = ?", (serial_number,))
+            if cur.fetchone():
+                return jsonify({"status": "error", "message": f"Serial number {serial_number} is already registered"}), 400
+
+            conn.execute("INSERT INTO devices (name, serial_number, os, browser, ip, is_authorized) VALUES (?, ?, ?, ?, ?, 0)",
+                         (name, serial_number, os_name, browser, ip))
             conn.commit()
             
-        logger.info(f"Device registered: {name} ({os_name}, {browser})")
-        return jsonify({"status": "success", "message": "Device registered successfully"})
+        logger.info(f"Device registered: {name} (SN: {serial_number}, {os_name}, {browser})")
+        return jsonify({"status": "success", "message": "Device registered successfully and is awaiting authorization"})
         
     except sqlite3.Error as e:
         logger.error(f"Database error: {e}")
@@ -183,8 +220,20 @@ def admin_dashboard():
             session.clear()
             return redirect(url_for("login"))
         
-        cur.execute("SELECT id, name, os, browser, ip, registered_at FROM devices ORDER BY id DESC")
-        devices = cur.fetchall()
+        cur.execute("SELECT id, name, serial_number, os, browser, ip, is_authorized, registered_at FROM devices ORDER BY id DESC")
+        devices = [
+            {
+                "id": row[0],
+                "name": row[1],
+                "serial_number": row[2],
+                "os": row[3],
+                "browser": row[4],
+                "ip": row[5],
+                "is_authorized": row[6],
+                "registered_at": row[7]
+            }
+            for row in cur.fetchall()
+        ]
     
     return render_template("admin-dashboard.html", devices=devices)
 
@@ -195,15 +244,17 @@ def api_devices():
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT id, name, os, browser, ip, registered_at FROM devices ORDER BY id DESC")
+            cur.execute("SELECT id, name, serial_number, os, browser, ip, is_authorized, registered_at FROM devices ORDER BY id DESC")
             devices = [
                 {
                     "id": row[0],
                     "name": row[1],
-                    "os": row[2],
-                    "browser": row[3],
-                    "ip": row[4],
-                    "registered_at": row[5]
+                    "serial_number": row[2],
+                    "os": row[3],
+                    "browser": row[4],
+                    "ip": row[5],
+                    "is_authorized": row[6],
+                    "registered_at": row[7]
                 }
                 for row in cur.fetchall()
             ]
@@ -222,17 +273,19 @@ def api_get_device(device_id):
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT id, name, os, browser, ip, registered_at FROM devices WHERE id=?", (device_id,))
+            cur.execute("SELECT id, name, serial_number, os, browser, ip, is_authorized, registered_at FROM devices WHERE id=?", (device_id,))
             row = cur.fetchone()
             
             if row:
                 device = {
                     "id": row[0],
                     "name": row[1],
-                    "os": row[2],
-                    "browser": row[3],
-                    "ip": row[4],
-                    "registered_at": row[5]
+                    "serial_number": row[2],
+                    "os": row[3],
+                    "browser": row[4],
+                    "ip": row[5],
+                    "is_authorized": row[6],
+                    "registered_at": row[7]
                 }
                 return jsonify({
                     "status": "success",
@@ -261,17 +314,19 @@ def api_check_device():
     try:
         with sqlite3.connect(DB_FILE) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT id, name, os, browser, ip, registered_at FROM devices WHERE name=? ORDER BY id DESC LIMIT 1", (device_name,))
+            cur.execute("SELECT id, name, serial_number, os, browser, ip, is_authorized, registered_at FROM devices WHERE name=? ORDER BY id DESC LIMIT 1", (device_name,))
             row = cur.fetchone()
             
             if row:
                 device = {
                     "id": row[0],
                     "name": row[1],
-                    "os": row[2],
-                    "browser": row[3],
-                    "ip": row[4],
-                    "registered_at": row[5]
+                    "serial_number": row[2],
+                    "os": row[3],
+                    "browser": row[4],
+                    "ip": row[5],
+                    "is_authorized": row[6],
+                    "registered_at": row[7]
                 }
                 return jsonify({
                     "status": "success",
@@ -304,20 +359,22 @@ def api_search_devices():
             cur = conn.cursor()
             search_pattern = f"%{query}%"
             cur.execute("""
-                SELECT id, name, os, browser, ip, registered_at 
+                SELECT id, name, serial_number, os, browser, ip, is_authorized, registered_at 
                 FROM devices 
-                WHERE name LIKE ? OR os LIKE ? OR browser LIKE ? 
+                WHERE name LIKE ? OR serial_number LIKE ? OR os LIKE ? OR browser LIKE ? 
                 ORDER BY id DESC
-            """, (search_pattern, search_pattern, search_pattern))
+            """, (search_pattern, search_pattern, search_pattern, search_pattern))
             
             devices = [
                 {
                     "id": row[0],
                     "name": row[1],
-                    "os": row[2],
-                    "browser": row[3],
-                    "ip": row[4],
-                    "registered_at": row[5]
+                    "serial_number": row[2],
+                    "os": row[3],
+                    "browser": row[4],
+                    "ip": row[5],
+                    "is_authorized": row[6],
+                    "registered_at": row[7]
                 }
                 for row in cur.fetchall()
             ]
@@ -378,8 +435,80 @@ def api_device_stats():
                 }
             })
     except Exception as e:
-        logger.error(f"API error in /api/devices/stats: {e}")
+        logger.error(f"API error in /api/device/stats: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+# --------------------- Admin Device Authorization ---------------------
+@app.route("/api/devices/<int:device_id>/authorize", methods=["POST"])
+def api_authorize_device(device_id):
+    """Authorize or deauthorize a device (admin only)"""
+    if "admin" not in session or "admin_id" not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Content-Type must be application/json"}), 400
+    
+    data = request.get_json()
+    authorize = data.get("authorize", True)
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            # Check if device exists
+            cur.execute("SELECT id FROM devices WHERE id=?", (device_id,))
+            if not cur.fetchone():
+                return jsonify({"status": "error", "message": "Device not found"}), 404
+            
+            # Update authorization status
+            status = 1 if authorize else 0
+            cur.execute("UPDATE devices SET is_authorized=? WHERE id=?", (status, device_id))
+            conn.commit()
+            
+            action = "authorized" if authorize else "deauthorized"
+            logger.info(f"Device {device_id} {action} by admin: {session.get('admin')}")
+            return jsonify({"status": "success", "message": f"Device {action} successfully"})
+            
+    except sqlite3.Error as e:
+        logger.error(f"Database error authorizing device: {e}")
+        return jsonify({"status": "error", "message": "Database error occurred"}), 500
+
+@app.route("/api/devices/authorize-serial", methods=["POST"])
+def api_authorize_serial():
+    """Authorize a device by its serial number (admin only)"""
+    if "admin" not in session or "admin_id" not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    if not request.is_json:
+        return jsonify({"status": "error", "message": "Content-Type must be application/json"}), 400
+    
+    data = request.get_json()
+    serial_number = data.get("serial_number", "").strip()
+    authorize = data.get("authorize", True)
+    
+    if not serial_number:
+        return jsonify({"status": "error", "message": "Serial number is required"}), 400
+    
+    try:
+        with sqlite3.connect(DB_FILE) as conn:
+            cur = conn.cursor()
+            # Check if device exists
+            cur.execute("SELECT id FROM devices WHERE serial_number=?", (serial_number,))
+            device = cur.fetchone()
+            if not device:
+                return jsonify({"status": "error", "message": f"Device with SN {serial_number} not found"}), 404
+            
+            # Update authorization status
+            status = 1 if authorize else 0
+            cur.execute("UPDATE devices SET is_authorized=? WHERE serial_number=?", (status, serial_number))
+            conn.commit()
+            
+            action = "authorized" if authorize else "deauthorized"
+            logger.info(f"Device SN {serial_number} {action} by admin: {session.get('admin')}")
+            return jsonify({"status": "success", "message": f"Device with serial number {serial_number} {action} successfully"})
+            
+    except sqlite3.Error as e:
+        logger.error(f"Database error authorizing device by SN: {e}")
+        return jsonify({"status": "error", "message": "Database error occurred"}), 500
 
 # --------------------- Admin Device Management ---------------------
 @app.route("/api/devices/<int:device_id>", methods=["PUT"])

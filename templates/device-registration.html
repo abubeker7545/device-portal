@@ -202,6 +202,17 @@
           >
         </div>
 
+        <div class="form-group">
+          <label for="serial-number">Serial Number</label>
+          <input 
+            type="text" 
+            id="serial-number" 
+            name="serial_number" 
+            placeholder="e.g., SN-12345678"
+            required
+          >
+        </div>
+
         <button type="submit" id="submitBtn">Register Device</button>
 
         <a href="/login" class="admin-btn">Admin Login</a>
@@ -256,9 +267,10 @@
       e.preventDefault();
       
       const deviceName = document.getElementById('device-name').value.trim();
+      const serialNumber = document.getElementById('serial-number').value.trim();
       
-      if (!deviceName) {
-        errorMessage.textContent = 'Please enter a device name.';
+      if (!deviceName || !serialNumber) {
+        errorMessage.textContent = 'Please enter both device name and serial number.';
         errorMessage.style.display = 'block';
         successMessage.style.display = 'none';
         return;
@@ -278,6 +290,7 @@
           },
           body: JSON.stringify({
             name: deviceName,
+            serial_number: serialNumber,
             os: getOS(),
             browser: getBrowser()
           })
